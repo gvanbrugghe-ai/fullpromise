@@ -475,7 +475,7 @@ img{max-width:100%;}
 .del-change{color:var(--accent);cursor:pointer;font-size:10.5px;text-decoration:underline;margin-left:5px;}
 
 /* store list */
-.store-list{display:none;flex-direction:column;gap:4px;margin-top:8px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);}
+.store-list{display:none;flex-direction:column;gap:4px;margin-top:8px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);max-height:260px;overflow-y:auto;}
 .store-list.open{display:flex;}
 .store-hint{font-size:9.5px;color:var(--mute);margin-bottom:3px;text-transform:uppercase;letter-spacing:.07em;}
 .store-item{
@@ -488,6 +488,7 @@ img{max-width:100%;}
 .store-nm{font-size:11.5px;font-weight:600;flex:1;color:var(--ink);}
 .store-addr{font-size:10.5px;color:var(--mute);}
 .dly-fast{font-size:10.5px;font-weight:600;color:var(--green);white-space:nowrap;}
+.dly-mid{font-size:10.5px;font-weight:600;color:#0077cc;white-space:nowrap;}
 .dly-slow{font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap;}
 /* ═══════════════════════════════════════
    END DELIVERY PROMISE — PDP
@@ -1983,7 +1984,18 @@ var MOCK_CITIES=[
 ];
 
 var MOCK_STORES={
-  'NY':[{name:'APEX Manhattan',addr:'620 W 57th St, New York',delai:'2h',fast:true},{name:'APEX Brooklyn',addr:'200 Atlantic Ave, Brooklyn',delai:'2h',fast:true},{name:'APEX Queens',addr:'Queens Center Mall',delai:'3 business days',fast:false}],
+  'NY':[
+    {name:'APEX Midtown West',    addr:'620 W 57th St, Manhattan',            delai:'2h',               fast:true},
+    {name:'APEX SoHo',            addr:'103 Prince St, Manhattan',             delai:'2h',               fast:true},
+    {name:'APEX Upper East Side', addr:'1407 Lexington Ave, Manhattan',        delai:'2h',               fast:true},
+    {name:'APEX Flatiron',        addr:'865 Broadway, Manhattan',              delai:'4h',               fast:true},
+    {name:'APEX Brooklyn Heights',addr:'200 Atlantic Ave, Brooklyn',           delai:'4h',               fast:true},
+    {name:'APEX Williamsburg',    addr:'325 Bedford Ave, Brooklyn',            delai:'4h',               fast:true},
+    {name:'APEX Astoria',         addr:'31-10 Steinway St, Queens',            delai:'Next day',         fast:false},
+    {name:'APEX Queens Center',   addr:'Queens Center Mall, Elmhurst',         delai:'3 business days',  fast:false},
+    {name:'APEX Staten Island',   addr:'2655 Richmond Ave, Staten Island',     delai:'3 business days',  fast:false},
+    {name:'APEX Bronx Hub',       addr:'783 Southern Blvd, Bronx',             delai:'3 business days',  fast:false},
+  ],
   'CA':[{name:'APEX Beverly Hills',addr:'9500 Wilshire Blvd',delai:'2h',fast:true},{name:'APEX Santa Monica',addr:'1415 3rd St Promenade',delai:'2h',fast:true}],
   'IL':[{name:'APEX Chicago Loop',addr:'180 N Michigan Ave',delai:'2h',fast:true},{name:'APEX Evanston',addr:'1700 Orrington Ave',delai:'3 business days',fast:false}],
   'TX':[{name:'APEX Austin',addr:'2901 S Capital of TX Hwy',delai:'3 business days',fast:false},{name:'APEX Houston',addr:'5015 Westheimer Rd',delai:'3 business days',fast:false}],
@@ -2112,10 +2124,12 @@ function renderStores2(){
   sl.innerHTML = '<div class="store-hint">'+hint+'</div>'+
     storeArr.map(function(s){
       var isCh = pdpChosenStore===s.name;
-      var cls = s.fast?'dly-fast':'dly-slow';
+      var cls = s.delai==='2h'||s.delai==='4h' ? 'dly-fast'
+              : s.delai==='Next day' ? 'dly-mid'
+              : 'dly-slow';
       return '<div class="store-item'+(isCh?' chosen':'')+'" data-name="'+s.name+'" data-fast="'+s.fast+'" data-delai="'+s.delai+'">'+
         '<div style="flex:1"><div class="store-nm">'+s.name+'</div><div class="store-addr">'+s.addr+'</div></div>'+
-        '<div class="'+cls+'">In '+s.delai+'</div></div>';
+        '<div class="'+cls+'">'+s.delai+'</div></div>';
     }).join('');
   sl.querySelectorAll('.store-item').forEach(function(el){
     el.addEventListener('click',function(e){
@@ -2124,8 +2138,10 @@ function renderStores2(){
       var isFast = this.dataset.fast==='true';
       sl.querySelectorAll('.store-item').forEach(function(s){ s.classList.remove('chosen'); });
       this.classList.add('chosen');
+      var delai = this.dataset.delai;
+      var col = (delai==='2h'||delai==='4h') ? 'var(--green)' : (delai==='Next day') ? '#0077cc' : 'var(--amber)';
       document.getElementById('pdp-cc-r3').innerHTML =
-        '<span style="color:'+(isFast?'var(--green)':'var(--amber)')+';font-weight:600;">'+pdpChosenStore+' · In '+this.dataset.delai+'</span>'+
+        '<span style="color:'+col+';font-weight:600;">'+pdpChosenStore+' · '+delai+'</span>'+
         '<span class="del-change" onclick="event.stopPropagation();pdpOpenStores()">Change</span>';
       sl.classList.remove('open'); pdpStoresOpen=false;
       document.getElementById('pdp-cc').classList.add('selected');
