@@ -321,6 +321,13 @@ button,input,select{font-family:var(--font);}
 .btn-co:hover{background:#0046d6;}
 .os-secure{padding:0 18px 14px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--mute);}
 
+/* checkout addr autocomplete */
+.co-ac-item{padding:9px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);}
+.co-ac-item:last-child{border-bottom:none;}
+.co-ac-item:hover{background:var(--surf);}
+.co-ac-city{font-weight:600;color:var(--ink);}
+.co-ac-state{font-size:11px;color:var(--mute);margin-left:auto;}
+
 .back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mute);cursor:pointer;margin:16px 32px;transition:color .15s;}
 .back-link:hover{color:var(--ink);}
 </style>
@@ -669,112 +676,67 @@ button,input,select{font-family:var(--font);}
   <span class="back-link" onclick="goTo('pdp')">← Back to product</span>
   <div class="co-layout">
     <div>
-      <!-- Address -->
+
+      <!-- ADDRESS SECTION -->
       <div class="co-sec">
-        <div class="co-sec-hd"><div class="co-sec-title"><div class="co-num done">✓</div>Delivery address</div><span class="co-edit">Edit</span></div>
-        <div class="co-body">
+        <div class="co-sec-hd">
+          <div class="co-sec-title"><div class="co-num done" id="co-addr-num">✓</div>Delivery address</div>
+          <span class="co-edit" onclick="coEditAddr()">Edit</span>
+        </div>
+        <!-- Collapsed view -->
+        <div id="co-addr-collapsed" class="co-body" style="display:flex;align-items:center;gap:10px;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1C4.79 1 3 2.79 3 5c0 2.63 4 8 4 8s4-5.37 4-8c0-2.21-1.79-4-4-4zm0 5.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="var(--accent)"/></svg>
+          <div>
+            <div style="font-size:13px;font-weight:600;" id="co-addr-summary">Alex Johnson — 348 West 57th Street, New York, 10019</div>
+          </div>
+        </div>
+        <!-- Expanded form -->
+        <div id="co-addr-form" class="co-body" style="display:none;">
           <div class="form-grid">
-            <div class="form-group"><label class="form-label">First name</label><input class="form-input filled" value="Alex"/></div>
-            <div class="form-group"><label class="form-label">Last name</label><input class="form-input filled" value="Johnson"/></div>
+            <div class="form-group"><label class="form-label">First name</label><input class="form-input filled" id="co-fn" value="Alex"/></div>
+            <div class="form-group"><label class="form-label">Last name</label><input class="form-input filled" id="co-ln" value="Johnson"/></div>
           </div>
-          <div class="form-grid full" style="margin-top:10px;">
-            <div class="form-group"><label class="form-label">Street address</label><input class="form-input filled" value="348 West 57th Street, Apt 12B"/></div>
+          <!-- Street with autocomplete -->
+          <div class="form-grid full" style="margin-top:10px;position:relative;">
+            <div class="form-group">
+              <label class="form-label">Street address</label>
+              <input class="form-input filled" id="co-street" value="348 West 57th Street, Apt 12B" autocomplete="off" oninput="coStreetInput(this.value)"/>
+              <div id="co-street-ac" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:var(--r);z-index:60;display:none;box-shadow:var(--sh-lg);overflow:hidden;"></div>
+            </div>
           </div>
-          <div class="form-grid" style="margin-top:10px;">
-            <div class="form-group"><label class="form-label">City</label><input class="form-input filled" value="New York"/></div>
-            <div class="form-group"><label class="form-label">ZIP</label><input class="form-input filled" value="10019"/></div>
+          <div class="form-grid" style="margin-top:10px;position:relative;">
+            <div class="form-group">
+              <label class="form-label">City</label>
+              <input class="form-input filled" id="co-city" value="New York" autocomplete="off" oninput="coCityInput(this.value)" onchange="coDetectCity(this.value)"/>
+              <div id="co-city-ac" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:var(--r);z-index:60;display:none;box-shadow:var(--sh-lg);overflow:hidden;"></div>
+            </div>
+            <div class="form-group"><label class="form-label">ZIP</label><input class="form-input filled" id="co-zip" value="10019"/></div>
+          </div>
+          <div style="margin-top:12px;">
+            <button onclick="coSaveAddr()" style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;">Save address</button>
           </div>
         </div>
       </div>
-      <!-- Delivery -->
+
+      <!-- SHIPPING METHOD -->
       <div class="co-sec">
         <div class="co-sec-hd"><div class="co-sec-title"><div class="co-num">2</div>Shipping method</div></div>
         <div class="co-body">
-          <div class="split-notice">
+
+          <!-- Split / single shipment notice (dynamic) -->
+          <div id="co-split-notice" class="split-notice" style="margin-bottom:16px;">
             <div style="font-size:18px;flex-shrink:0;">📦</div>
-            <div><div class="split-notice-title">Your order ships in 2 packages</div><div class="split-notice-sub">Items come from different warehouses — select one delivery option and we'll show when each package arrives.</div></div>
+            <div><div class="split-notice-title" id="co-notice-title">Your order ships in 2 packages</div><div class="split-notice-sub" id="co-notice-sub">Items come from different warehouses — select one delivery option to see when each package arrives.</div></div>
           </div>
-          <div id="co-opts">
-            <!-- Option 1: In-store pickup -->
-            <div class="del-opt-card" onclick="coSelect(this,'pickup')">
-              <div class="del-radio"><div class="del-radio-dot"></div></div>
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                  <div class="del-opt-nm">In-store pickup — APEX Manhattan</div>
-                  <span class="eco eco-0"><svg width="8" height="8" viewBox="0 0 12 12" fill="none"><path d="M10 2C10 2 8 2 5 5S2 10 2 10c0 0 2-1 4-3 0 1 0 2-1 3 3-1 5-4 5-8z" fill="currentColor"/></svg> 0 emissions</span>
-                </div>
-                <!-- Store picker -->
-                <div style="font-size:12px;color:var(--ink2);margin-bottom:6px;">
-                  <strong id="co-store-sel">APEX Manhattan</strong> · 620 W 57th St
-                  <span class="del-change" onclick="event.stopPropagation();coToggleStorePicker()">Change store</span>
-                </div>
-                <div class="co-store-picker hidden" id="co-sp" onclick="event.stopPropagation()">
-                  <div class="co-sp-title">Choose a store</div>
-                  <div class="co-sp-opt chosen" onclick="coPickStore(this,'APEX Manhattan','620 W 57th St','fast')"><div class="co-sp-radio"><div class="co-sp-dot"></div></div><div class="co-sp-info"><div class="co-sp-name">APEX Manhattan</div><div class="co-sp-addr">620 W 57th St, New York</div></div><div class="co-sp-avail fast">Ready in 2h</div></div>
-                  <div class="co-sp-opt" onclick="coPickStore(this,'APEX Brooklyn','200 Atlantic Ave','fast')"><div class="co-sp-radio"><div class="co-sp-dot"></div></div><div class="co-sp-info"><div class="co-sp-name">APEX Brooklyn</div><div class="co-sp-addr">200 Atlantic Ave, Brooklyn</div></div><div class="co-sp-avail fast">Ready in 2h</div></div>
-                  <div class="co-sp-opt" onclick="coPickStore(this,'APEX Queens','Queens Center Mall','slow')"><div class="co-sp-radio"><div class="co-sp-dot"></div></div><div class="co-sp-info"><div class="co-sp-name">APEX Queens</div><div class="co-sp-addr">Queens Center Mall</div></div><div class="co-sp-avail slow">3 business days</div></div>
-                </div>
-                <div class="co-ship-detail">
-                  <div class="co-ship-row"><span class="co-ship-badge ship1">Parcel 1</span><span class="ship-item">MacBook Pro 14"</span><span class="ship-date green" id="co-p1-pickup">Ready in 2h today</span><span class="ship-price free">Free</span></div>
-                  <div class="co-ship-row"><span class="co-ship-badge ship2">Parcel 2</span><span class="ship-item">APEX Keyboard</span><span class="ship-date amber" id="co-p2-pickup">Ready in 3 business days · Thu Jun 5</span><span class="ship-price free">Free</span></div>
-                </div>
-              </div>
-              <div class="del-opt-nm" style="font-weight:700;white-space:nowrap;align-self:center;">Free</div>
-            </div>
 
-            <!-- Option 2: Express -->
-            <div class="del-opt-card selected" onclick="coSelect(this,'express')">
-              <div class="del-radio"><div class="del-radio-dot"></div></div>
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                  <div class="del-opt-nm">Express 2-Day Delivery</div>
-                  <span class="eco eco-mi"><svg width="8" height="8" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M4 6h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Medium carbon</span>
-                </div>
-                <div class="co-ship-detail">
-                  <div class="co-ship-row"><span class="co-ship-badge ship1">Parcel 1</span><span class="ship-item">MacBook Pro 14"</span><span class="ship-date green">Thu, Jun 5 · FedEx Express</span><span class="ship-price">$7.99</span></div>
-                  <div class="co-ship-row"><span class="co-ship-badge ship2">Parcel 2</span><span class="ship-item">APEX Keyboard</span><span class="ship-date green">Fri, Jun 6 · FedEx Express</span><span class="ship-price">$5.99</span></div>
-                </div>
-              </div>
-              <div class="del-opt-nm" style="font-weight:700;white-space:nowrap;align-self:center;">$13.98</div>
-            </div>
+          <!-- DELIVERY OPTIONS (rendered by JS) -->
+          <div id="co-opts"></div>
 
-            <!-- Option 3: Standard -->
-            <div class="del-opt-card" onclick="coSelect(this,'standard')">
-              <div class="del-radio"><div class="del-radio-dot"></div></div>
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                  <div class="del-opt-nm">Standard Shipping</div>
-                  <span class="eco eco-lo"><svg width="8" height="8" viewBox="0 0 12 12" fill="none"><path d="M10 2C10 2 8 2 5 5S2 10 2 10c0 0 2-1 4-3 0 1 0 2-1 3 3-1 5-4 5-8z" fill="currentColor"/></svg> Low carbon</span>
-                </div>
-                <div class="co-ship-detail">
-                  <div class="co-ship-row"><span class="co-ship-badge ship1">Parcel 1</span><span class="ship-item">MacBook Pro 14"</span><span class="ship-date">Mon, Jun 9 · UPS Ground</span><span class="ship-price free">Free</span></div>
-                  <div class="co-ship-row"><span class="co-ship-badge ship2">Parcel 2</span><span class="ship-item">APEX Keyboard</span><span class="ship-date">Wed, Jun 11 · UPS Ground</span><span class="ship-price free">Free</span></div>
-                </div>
-              </div>
-              <div class="del-opt-nm" style="font-weight:700;white-space:nowrap;align-self:center;color:var(--green);">Free</div>
-            </div>
-
-            <!-- Option 4: Same-day — GREYED (not all eligible) -->
-            <div class="del-opt-card disabled-card">
-              <div class="del-radio"></div>
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                  <div class="del-opt-nm strike">Same-Day Delivery</div>
-                  <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#f3f4f6;color:#9ca3af;border:1px solid #e5e7eb;text-transform:uppercase;">Unavailable</span>
-                </div>
-                <div style="font-size:11px;color:#9ca3af;">Not all items in your cart are eligible for same-day delivery.</div>
-                <div class="co-ship-detail" style="margin-top:4px;">
-                  <div class="co-ship-row"><span class="co-ship-badge ship1">Parcel 1</span><span class="ship-item">MacBook Pro 14"</span><span class="ship-date gray">Not available</span><span class="ship-price" style="color:#9ca3af;">—</span></div>
-                  <div class="co-ship-row"><span class="co-ship-badge ship2">Parcel 2</span><span class="ship-item">APEX Keyboard</span><span class="ship-date gray">Not available</span><span class="ship-price" style="color:#9ca3af;">—</span></div>
-                </div>
-              </div>
-              <div class="del-opt-nm" style="font-weight:700;white-space:nowrap;align-self:center;color:#9ca3af;">—</div>
-            </div>
-          </div>
           <button style="width:100%;height:48px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;" onclick="goTo('payment')">Continue to payment →</button>
         </div>
       </div>
     </div>
+
     <!-- Order summary -->
     <div class="os">
       <div class="os-hd">Order summary · 2 items</div>
@@ -784,9 +746,9 @@ button,input,select{font-family:var(--font);}
       </div>
       <div class="os-totals">
         <div class="os-line"><span>Subtotal</span><span>$2,148.00</span></div>
-        <div class="os-line"><span>Shipping (2 parcels)</span><span>$7.99 + Free</span></div>
-        <div class="os-line" style="color:var(--green);font-size:11px;">✓ Parcel 2 is free (order over $150)</div>
-        <div class="os-line"><span>Tax (NY 8.875%)</span><span>$190.52</span></div>
+        <div class="os-line"><span id="os-ship-lbl">Shipping (2 parcels)</span><span id="os-ship-val">$7.99 + Free</span></div>
+        <div class="os-line" style="color:var(--green);font-size:11px;" id="os-ship-note">✓ Parcel 2 is free (order over $150)</div>
+        <div class="os-line"><span id="os-tax-lbl">Tax (NY 8.875%)</span><span>$190.52</span></div>
       </div>
       <div class="os-total"><div class="os-total-lbl">Total</div><div class="os-total-val">$2,346.51</div></div>
       <button class="btn-co" onclick="goTo('payment')">
@@ -1320,31 +1282,6 @@ function pdpOptSelect(el){
 }
 
 /* ── CHECKOUT ── */
-function coSelect(el){
-  document.querySelectorAll('#co-opts .del-opt-card').forEach(function(c){ c.classList.remove('selected'); });
-  el.classList.add('selected');
-  var sp=document.getElementById('co-sp'); if(sp) sp.classList.add('hidden');
-}
-function coToggleStorePicker(){
-  var sp=document.getElementById('co-sp'); if(!sp) return;
-  sp.classList.toggle('hidden');
-  coSelect(sp.closest('.del-opt-card'));
-}
-function coPickStore(el, name, addr, speed){
-  document.querySelectorAll('.co-sp-opt').forEach(function(o){ o.classList.remove('chosen'); });
-  el.classList.add('chosen');
-  var sel=document.getElementById('co-store-sel'); if(sel) sel.textContent=name;
-  var p1=document.getElementById('co-p1-pickup'), p2=document.getElementById('co-p2-pickup');
-  if(speed==='fast'){
-    if(p1){ p1.textContent='Ready in 2h today'; p1.className='ship-date green'; }
-    if(p2){ p2.textContent='Ready in 3 business days · Thu Jun 5'; p2.className='ship-date amber'; }
-  } else {
-    if(p1){ p1.textContent='Ready in 3 business days · Thu Jun 5'; p1.className='ship-date amber'; }
-    if(p2){ p2.textContent='Ready in 3 business days · Thu Jun 5'; p2.className='ship-date amber'; }
-  }
-  var sp=document.getElementById('co-sp'); if(sp) sp.classList.add('hidden');
-}
-
 /* ── ACCORDION ── */
 function toggleAcc(btn){
   btn.classList.toggle('open');
@@ -1404,6 +1341,315 @@ function toggleAcc(btn){
 /* ── INIT ── */
 renderAllCards();
 updatePdpCC();
+
+/* ─────────────────────────────────────
+   CHECKOUT LOGIC
+───────────────────────────────────── */
+
+/* City → state mapping for checkout */
+var CO_CITIES = [
+  {city:'New York',     zip:'10019', state:'NY', express:'Thu, Jun 5', standard:'Mon, Jun 9',  sameday:true},
+  {city:'Los Angeles',  zip:'90001', state:'CA', express:'Thu, Jun 5', standard:'Mon, Jun 9',  sameday:true},
+  {city:'Chicago',      zip:'60601', state:'IL', express:'Wed, Jun 4', standard:'Fri, Jun 6',  sameday:false},
+  {city:'Houston',      zip:'77001', state:'TX', express:'Thu, Jun 5', standard:'Mon, Jun 9',  sameday:false},
+  {city:'Seattle',      zip:'98101', state:'WA', express:'Thu, Jun 5', standard:'Mon, Jun 9',  sameday:false},
+  {city:'Miami',        zip:'33101', state:'FL', express:'Fri, Jun 6', standard:'Tue, Jun 10', sameday:false},
+  {city:'Boston',       zip:'02101', state:'MA', express:'Thu, Jun 5', standard:'Mon, Jun 9',  sameday:false},
+  {city:'Denver',       zip:'80201', state:'CO', express:'Fri, Jun 6', standard:'Wed, Jun 11', sameday:false},
+  {city:'Austin',       zip:'73301', state:'TX', express:'Thu, Jun 5', standard:'Mon, Jun 9',  sameday:false},
+  {city:'Portland',     zip:'97201', state:'OR', express:'Fri, Jun 6', standard:'Tue, Jun 10', sameday:false},
+  {city:'Phoenix',      zip:'85001', state:'AZ', express:'Fri, Jun 6', standard:'Wed, Jun 11', sameday:false},
+  {city:'Atlanta',      zip:'30301', state:'GA', express:'Fri, Jun 6', standard:'Wed, Jun 11', sameday:false},
+];
+
+var coDeliveryCity = {city:'New York', zip:'10019', state:'NY',
+  express:'Thu, Jun 5', standard:'Mon, Jun 9', sameday:true};
+var coStoreChosen  = 'APEX Manhattan';
+var coStoreAddr    = '620 W 57th St, New York';
+var coStoreSpeed   = 'fast';
+
+/* Address edit */
+function coEditAddr(){
+  document.getElementById('co-addr-collapsed').style.display='none';
+  document.getElementById('co-addr-form').style.display='block';
+}
+function coSaveAddr(){
+  var fn=document.getElementById('co-fn').value;
+  var ln=document.getElementById('co-ln').value;
+  var st=document.getElementById('co-street').value;
+  var ct=document.getElementById('co-city').value;
+  var zp=document.getElementById('co-zip').value;
+  document.getElementById('co-addr-summary').textContent=fn+' '+ln+' — '+st+', '+ct+', '+zp;
+  document.getElementById('co-addr-collapsed').style.display='flex';
+  document.getElementById('co-addr-form').style.display='none';
+  coDetectCity(ct);
+}
+
+/* City autocomplete */
+function coCityInput(v){
+  var ac=document.getElementById('co-city-ac'); if(!ac) return;
+  if(v.length<2){ ac.style.display='none'; return; }
+  var n=v.toLowerCase();
+  var matches=CO_CITIES.filter(function(c){ return c.city.toLowerCase().startsWith(n); }).slice(0,6);
+  if(!matches.length){ ac.style.display='none'; return; }
+  ac.innerHTML=matches.map(function(c){
+    return '<div class="co-ac-item" onclick="coPickCity(\''+c.city+'\')">'
+      +'<span class="co-ac-city">'+c.city+'</span>'
+      +'<span class="co-ac-state">'+c.state+'</span>'
+      +'</div>';
+  }).join('');
+  ac.style.display='block';
+}
+function coPickCity(city){
+  document.getElementById('co-city').value=city;
+  document.getElementById('co-city-ac').style.display='none';
+  coDetectCity(city);
+}
+function coDetectCity(city){
+  var match=CO_CITIES.find(function(c){ return c.city.toLowerCase()===city.toLowerCase(); });
+  if(match){
+    coDeliveryCity=match;
+    document.getElementById('co-zip').value=match.zip;
+    renderCoOpts();
+  }
+}
+
+/* Street address autocomplete (mock suggestions) */
+var STREET_SUGGESTIONS=[
+  '1 Apple Park Way','100 Main Street','200 Market Street',
+  '348 West 57th Street','400 Pine Street','500 Boylston Street',
+  '601 N Michigan Avenue','700 S Flower Street','800 Wilshire Blvd',
+  '900 Peachtree Street','1000 Biscayne Blvd',
+];
+function coStreetInput(v){
+  var ac=document.getElementById('co-street-ac'); if(!ac) return;
+  if(v.length<3){ ac.style.display='none'; return; }
+  var n=v.toLowerCase();
+  var matches=STREET_SUGGESTIONS.filter(function(s){ return s.toLowerCase().includes(n); }).slice(0,4);
+  if(!matches.length){ ac.style.display='none'; return; }
+  ac.innerHTML=matches.map(function(s){
+    return '<div class="co-ac-item" onclick="document.getElementById(\'co-street\').value=\''+s+'\';document.getElementById(\'co-street-ac\').style.display=\'none\';">'
+      +'<svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="color:var(--mute);flex-shrink:0;"><path d="M7 1C4.79 1 3 2.79 3 5c0 2.63 4 8 4 8s4-5.37 4-8c0-2.21-1.79-4-4-4zm0 5.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="currentColor"/></svg>'
+      +'<span>'+s+'</span>'
+      +'</div>';
+  }).join('');
+  ac.style.display='block';
+}
+document.addEventListener('click',function(e){
+  ['co-city-ac','co-street-ac'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el&&!el.contains(e.target)) el.style.display='none';
+  });
+});
+
+/* Build eco badge */
+function ecoBadge(type){
+  if(type==='0')   return '<span class="eco eco-0"><svg width="8" height="8" viewBox="0 0 12 12" fill="none"><path d="M10 2C10 2 8 2 5 5S2 10 2 10c0 0 2-1 4-3 0 1 0 2-1 3 3-1 5-4 5-8z" fill="currentColor"/></svg> 0 emissions</span>';
+  if(type==='lo')  return '<span class="eco eco-lo"><svg width="8" height="8" viewBox="0 0 12 12" fill="none"><path d="M10 2C10 2 8 2 5 5S2 10 2 10c0 0 2-1 4-3 0 1 0 2-1 3 3-1 5-4 5-8z" fill="currentColor"/></svg> Low carbon</span>';
+  if(type==='mi')  return '<span class="eco eco-mi"><svg width="8" height="8" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M4 6h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Medium carbon</span>';
+  return '';
+}
+
+/* Parcel rows helper */
+function parcelRow(badge, cls, item, dateHtml, price, priceClass){
+  return '<div class="co-ship-row">'+
+    '<span class="co-ship-badge '+badge+'">'+cls+'</span>'+
+    '<span class="ship-item">'+item+'</span>'+
+    '<span class="ship-date">'+dateHtml+'</span>'+
+    '<span class="ship-price '+priceClass+'">'+price+'</span>'+
+    '</div>';
+}
+
+/* Store picker HTML for checkout */
+function coStorePickerHtml(){
+  var stores=ALL_STORES[coDeliveryCity.state]||[];
+  if(!stores.length) return '';
+  return '<div class="co-store-picker" id="co-sp" onclick="event.stopPropagation()" style="display:none;margin-top:8px;">'+
+    '<div class="co-sp-title">Choose a store</div>'+
+    stores.slice(0,5).map(function(s){
+      var isCh=coStoreChosen===s.name;
+      var spd=s.delai==='2h'||s.delai==='4h'?'fast':'slow';
+      return '<div class="co-sp-opt'+( isCh?' chosen':'')+'" onclick="coPickStore(this,&apos;'+s.name+'&apos;,&apos;'+s.addr+'&apos;,&apos;'+spd+'&apos;)">'+
+        '<div class="co-sp-radio"><div class="co-sp-dot"></div></div>'+
+        '<div class="co-sp-info"><div class="co-sp-name">'+s.name+'</div><div class="co-sp-addr">'+s.addr+'</div></div>'+
+        '<div class="co-sp-avail '+spd+'">'+s.delai+'</div></div>';
+    }).join('')+
+    '</div>';
+}
+
+/* Render delivery options */
+function renderCoOpts(){
+  var c = coDeliveryCity;
+
+  /* Single shipment: IL, TX, CO, OR, AZ, GA (items consolidated from same hub) */
+  var isSingle = ['IL','TX','CO','OR','AZ','GA'].indexOf(c.state) !== -1;
+
+  var hasStore = !!(ALL_STORES[c.state] && ALL_STORES[c.state].length);
+
+  /* Update shipment notice */
+  var noticeTitle = document.getElementById('co-notice-title');
+  var noticeSub   = document.getElementById('co-notice-sub');
+  if(noticeTitle) noticeTitle.textContent = isSingle
+    ? 'Your order ships in 1 package'
+    : 'Your order ships in 2 packages';
+  if(noticeSub) noticeSub.textContent = isSingle
+    ? 'All items ship together from our nearest warehouse to ' + c.city + '.'
+    : 'Items come from different warehouses — select a delivery option to see when each package arrives.';
+
+  /* Tax label */
+  var taxEl = document.getElementById('os-tax-lbl');
+  if(taxEl) taxEl.textContent = 'Tax (' + c.state + ' 8%)';
+
+  var opts = '';
+
+  /* ─────────────────────────────────────────
+     Option 1: In-store pickup
+  ───────────────────────────────────────── */
+  if(hasStore){
+    var storeReady   = coStoreSpeed === 'fast' ? '2h today' : '3 business days';
+    var p2StoreReady = isSingle ? storeReady : '3 business days · ' + c.express;
+    var p2StoreColor = isSingle ? 'var(--green)' : 'var(--amber)';
+
+    opts += '<div class="del-opt-card" onclick="coSelect(this,&apos;pickup&apos;)">'
+      + '<div class="del-radio"><div class="del-radio-dot"></div></div>'
+      + '<div style="flex:1;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+          + '<div class="del-opt-nm">In-store pickup</div>'
+          + ecoBadge('0')
+        + '</div>'
+        + '<div style="font-size:12px;color:var(--ink2);margin-bottom:4px;">'
+          + '<strong id="co-store-sel">' + coStoreChosen + '</strong> &middot; ' + coStoreAddr
+          + ' <span class="del-change" onclick="event.stopPropagation();coToggleStorePicker()">Change store</span>'
+        + '</div>'
+        + coStorePickerHtml()
+        + '<div class="co-ship-detail">'
+          + parcelRow('ship1','Parcel 1','MacBook Pro 14"',
+              '<span style="color:var(--green);font-weight:600;">Ready in ' + storeReady + '</span>',
+              'Free','free')
+          + parcelRow('ship2','Parcel 2','APEX Keyboard',
+              '<span style="color:' + p2StoreColor + ';font-weight:600;">Ready in ' + p2StoreReady + '</span>',
+              'Free','free')
+        + '</div>'
+      + '</div>'
+      + '<div class="del-opt-nm" style="font-weight:700;white-space:nowrap;align-self:center;color:var(--green);">Free</div>'
+      + '</div>';
+  }
+
+  /* ─────────────────────────────────────────
+     Option 2: Express 2-day
+  ───────────────────────────────────────── */
+  var p2ExpressDate = isSingle ? c.express : c.express; /* same warehouse = same date */
+  var expressTotal  = isSingle ? '$7.99' : '$13.98';
+  var p2ExpressPrice = isSingle ? '' : '$5.99';
+
+  opts += '<div class="del-opt-card selected" onclick="coSelect(this,&apos;express&apos;)">'
+    + '<div class="del-radio"><div class="del-radio-dot"></div></div>'
+    + '<div style="flex:1;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '<div class="del-opt-nm">Express 2-Day Delivery</div>'
+        + ecoBadge('mi')
+      + '</div>'
+      + '<div class="co-ship-detail">'
+        + parcelRow('ship1','Parcel 1','MacBook Pro 14"',
+            '<span style="color:var(--green);font-weight:600;">' + c.express + ' · FedEx Express</span>',
+            '$7.99','')
+        + (isSingle
+          ? parcelRow('ship2','Parcel 2','APEX Keyboard',
+              '<span style="color:var(--green);font-weight:600;">' + c.express + ' · FedEx Express</span>',
+              'Included','free')
+          : parcelRow('ship2','Parcel 2','APEX Keyboard',
+              '<span style="color:var(--green);font-weight:600;">' + p2ExpressDate + ' · FedEx Express</span>',
+              '$5.99',''))
+      + '</div>'
+    + '</div>'
+    + '<div class="del-opt-nm" style="font-weight:700;white-space:nowrap;align-self:center;">' + expressTotal + '</div>'
+    + '</div>';
+
+  /* ─────────────────────────────────────────
+     Option 3: Standard
+  ───────────────────────────────────────── */
+  opts += '<div class="del-opt-card" onclick="coSelect(this,&apos;standard&apos;)">'
+    + '<div class="del-radio"><div class="del-radio-dot"></div></div>'
+    + '<div style="flex:1;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '<div class="del-opt-nm">Standard Shipping</div>'
+        + ecoBadge('lo')
+      + '</div>'
+      + '<div class="co-ship-detail">'
+        + parcelRow('ship1','Parcel 1','MacBook Pro 14"',
+            c.standard + ' · UPS Ground','Free','free')
+        + parcelRow('ship2','Parcel 2','APEX Keyboard',
+            c.standard + ' · UPS Ground',
+            isSingle ? 'Included' : 'Free',
+            'free')
+      + '</div>'
+    + '</div>'
+    + '<div class="del-opt-nm" style="font-weight:700;white-space:nowrap;align-self:center;color:var(--green);">Free</div>'
+    + '</div>';
+
+  /* ─────────────────────────────────────────
+     Option 4: Same-day — ALWAYS DISABLED
+     (Keyboard is never same-day eligible)
+     Show which item blocks it
+  ───────────────────────────────────────── */
+  opts += '<div class="del-opt-card disabled-card">'
+    + '<div class="del-radio"></div>'
+    + '<div style="flex:1;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '<div class="del-opt-nm strike">Same-Day Delivery</div>'
+        + '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#f3f4f6;color:#9ca3af;border:1px solid #e5e7eb;text-transform:uppercase;">Unavailable</span>'
+      + '</div>'
+      + '<div class="co-ship-detail">'
+        /* MacBook CAN do same-day — show it as available */
+        + '<div class="co-ship-row">'
+          + '<span class="co-ship-badge ship1">Parcel 1</span>'
+          + '<span class="ship-item">MacBook Pro 14"</span>'
+          + '<span class="ship-date" style="color:var(--green);font-weight:600;">✓ Eligible</span>'
+          + '<span class="ship-price" style="color:var(--mute);">—</span>'
+        + '</div>'
+        /* Keyboard CANNOT — highlighted as the blocker */
+        + '<div class="co-ship-row" style="background:#fff0f0;border-left:3px solid #fca5a5;">'
+          + '<span class="co-ship-badge" style="background:#fee2e2;color:#dc2626;">Parcel 2</span>'
+          + '<span class="ship-item" style="color:#dc2626;font-weight:600;">APEX Keyboard</span>'
+          + '<span class="ship-date" style="color:#dc2626;font-weight:600;">✗ Not eligible</span>'
+          + '<span class="ship-price" style="color:#9ca3af;">—</span>'
+        + '</div>'
+      + '</div>'
+      + '<div style="margin-top:6px;font-size:11px;color:#dc2626;padding:5px 8px;background:#fff0f0;border-radius:4px;border-left:3px solid #fca5a5;">'
+        + '⚠️ <strong>APEX Keyboard</strong> cannot be delivered same-day. Remove it from the cart or choose Express / Standard shipping.'
+      + '</div>'
+    + '</div>'
+    + '<div class="del-opt-nm" style="color:#9ca3af;align-self:center;">—</div>'
+    + '</div>';
+
+  var container = document.getElementById('co-opts');
+  if(container) container.innerHTML = opts;
+}
+
+function coSelect(el, type){
+  document.querySelectorAll('#co-opts .del-opt-card').forEach(function(c){ c.classList.remove('selected'); });
+  el.classList.add('selected');
+  var sp=document.getElementById('co-sp'); if(sp) sp.style.display='none';
+}
+function coToggleStorePicker(){
+  var sp=document.getElementById('co-sp'); if(!sp) return;
+  sp.style.display=sp.style.display==='none'?'':'none';
+}
+function coPickStore(el, name, addr, speed){
+  coStoreChosen=name; coStoreAddr=addr; coStoreSpeed=speed;
+  document.querySelectorAll('.co-sp-opt').forEach(function(o){ o.classList.remove('chosen'); });
+  el.classList.add('chosen');
+  var sel=document.getElementById('co-store-sel'); if(sel) sel.textContent=name;
+  var sp=document.getElementById('co-sp'); if(sp) sp.style.display='none';
+  /* Update parcel 1 date */
+  var storeReady=speed==='fast'?'2h today':'3 business days';
+  var rows=document.querySelectorAll('#co-opts .co-ship-row');
+  if(rows.length) rows[0].querySelector('.ship-date').innerHTML='<span style="color:var(--green);font-weight:600;">Ready in '+storeReady+'</span>';
+}
+
+/* Init checkout on page load */
+renderCoOpts();
+
 </script>
 </body>
 </html>
